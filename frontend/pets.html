@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Mascotas - PetLink</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+
+    #navbar {
+      margin-bottom: 15px;
+    }
+
+    .filters {
+      margin-bottom: 20px;
+    }
+
+    .pet-card {
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      padding: 10px;
+      margin: 10px;
+      display: inline-block;
+      width: 220px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .pet-card:hover {
+      box-shadow: 0px 0px 10px rgba(0,0,0,0.2);
+    }
+
+    .expanded {
+      background-color: #f9f9f9;
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      max-width: 500px;
+    }
+
+    button {
+      margin-top: 10px;
+      padding: 6px 12px;
+      border: none;
+      background: #007bff;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #0056b3;
+    }
+
+  </style>
+  <script src="js/pets.js" defer></script>
+</head>
+<body>
+  <div id="navbar"></div>
+
+  <h2>🐶 Lista de Mascotas</h2>
+
+  <div class="filters">
+    <label>Filtrar por especie:</label>
+    <select id="filter-species">
+      <option value="">Todas</option>
+      <option value="Perro">Perros</option>
+      <option value="Gato">Gatos</option>
+    </select>
+
+    <label>Estado:</label>
+    <select id="filter-availability">
+      <option value="">Todos</option>
+      <option value="disponible">Disponible</option>
+      <option value="reservado">Reservado</option>
+      <option value="adoptado">Adoptado</option>
+    </select>
+
+    <button id="btn-filter">Filtrar</button>
+  </div>
+
+  <div id="pet-list"></div>
+</body>
+</html>

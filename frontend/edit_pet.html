@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><title>Editar Mascota</title></head>
+<body>
+  <h1>Editar Mascota</h1>
+  <form id="formEdit">
+    <input id="name" placeholder="Nombre"><br><br>
+    <input id="species" placeholder="Especie"><br><br>
+    <input id="breed" placeholder="Raza"><br><br>
+    <input id="age" type="number" placeholder="Edad"><br><br>
+    <select id="sex">
+      <option value="">Sexo</option>
+      <option value="Macho">Macho</option>
+      <option value="Hembra">Hembra</option>
+    </select><br><br>
+    <input id="health_status" placeholder="Estado de salud"><br><br>
+    <input id="photo_url" placeholder="URL de la foto"><br><br>
+    <select id="availability">
+      <option value="">-- Estado --</option>
+      <option value="disponible">Disponible</option>
+      <option value="reservado">Reservado</option>
+      <option value="adoptado">Adoptado</option>
+    </select><br><br>
+    <button type="submit">Actualizar</button>
+  </form>
+  <p><a href="pets.html">Volver a mascotas</a></p>
+
+<script>
+const API = "http://127.0.0.1:5000/pets";
+const params = new URLSearchParams(window.location.search);
+const id = params.get("id");
+if (!id) { alert("Falta id"); throw new Error("Falta id"); }
+
+async function loadPet() {
+  try {
+    const res = await fetch(`${API}/${id}`);
+    if (!res.ok) throw new Error("No se pudo obtener la mascota");
+    const p = await res.json();
+    document.getElementById("name").value = p.name || "";
+    document.getElementById("species").value = p.species || "";
+    document.getElementById("breed").value = p.breed || "";
+    document.getElementById("age").value = p.age || "";
+    document.getElementById("sex").value = p.sex || "";
+    document.getElementById("health_status").value = p.health_status || "";
+    document.getElementById("photo_url").value = p.photo_url || "";
+    document.getElementById("availability").value = p.availability || "";
+  } catch(e) {
+    alert(e.message);
+  }
+}
+
+document.getElementById("formEdit").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const token = localStorage.getItem("token");
+  if (!token) { alert("Debes iniciar sesión como admin"); return; }
+  const body = {};
+  ["name","species","breed","age","sex","health_status","photo_url","availability"].forEach(k=>{
+    const val = document.getElementById(k).value;
+    if (val !== "") body[k]= (k==="age"? Number(val): val);
+  });
+  try {
+    const res = await fetch(`${API}/${id}`, {
+      method: "PUT",
+      headers: {"Content-Type":"application/json","Authorization":"Bearer "+token},
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.msg || "Error actualizando");
+    alert(data.msg);
+    window.location.href = "pets.html";
+  } catch(err) { alert(err.message); }
+});
+
+loadPet();
+</script>
+</body>
+</html>

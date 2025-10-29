@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><title>Agregar Mascota</title></head>
+<body>
+  <h1>Agregar Mascota</h1>
+  <form id="formAdd">
+    <input id="name" placeholder="Nombre" required><br><br>
+    <input id="species" placeholder="Especie"><br><br>
+    <input id="breed" placeholder="Raza"><br><br>
+    <input id="age" type="number" placeholder="Edad (años o meses)"><br><br>
+    <select id="sex">
+      <option value="">Sexo</option>
+      <option value="Macho">Macho</option>
+      <option value="Hembra">Hembra</option>
+    </select><br><br>
+    <input id="health_status" placeholder="Estado de salud"><br><br>
+    <input id="photo_url" placeholder="URL de la foto (opcional)"><br><br>
+    <select id="availability">
+      <option value="disponible">Disponible</option>
+      <option value="reservado">Reservado</option>
+      <option value="adoptado">Adoptado</option>
+    </select><br><br>
+    <button type="submit">Guardar</button>
+  </form>
+  <p><a href="pets.html">Volver a mascotas</a></p>
+
+<script>
+// Redirigir si no es admin
+(function checkAdmin() {
+  const t = localStorage.getItem("token");
+  if (!t) {
+    alert("Debes iniciar sesión como administrador");
+    window.location.href = "login.html";
+    return;
+  }
+  try {
+    const payload = JSON.parse(atob(t.split('.')[1]));
+    if (payload.role !== "admin") {
+      alert("Solo los administradores pueden agregar mascotas");
+      window.location.href = "pets.html";
+    }
+  } catch (e) {
+    alert("Token inválido. Inicia sesión nuevamente.");
+    window.location.href = "login.html";
+  }
+})();
+
+
+const API = "http://127.0.0.1:5000/pets";
+document.getElementById("formAdd").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const token = localStorage.getItem("token");
+  if (!token) { alert("Debes iniciar sesión como admin"); return; }
+  const body = {
+    name: document.getElementById("name").value,
+    species: document.getElementById("species").value,
+    breed: document.getElementById("breed").value,
+    age: document.getElementById("age").value || null,
+    sex: document.getElementById("sex").value,
+    health_status: document.getElementById("health_status").value,
+    photo_url: document.getElementById("photo_url").value,
+    availability: document.getElementById("availability").value
+  };
+  try {
+    const res = await fetch(API + "/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + token
+      },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.msg || "Error guardando");
+    alert("Mascota creada con id " + data.id);
+    window.location.href = "pets.html";
+  } catch(err) {
+    alert(err.message);
+  }
+});
+</script>
+</body>
+</html>

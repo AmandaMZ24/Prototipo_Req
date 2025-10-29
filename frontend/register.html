@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Registro - PetLink</title>
+</head>
+<body>
+  <h2>Registrar nuevo usuario</h2>
+  <input id="name" placeholder="Nombre"><br>
+  <input id="email" placeholder="Correo"><br>
+  <input id="password" type="password" placeholder="Contraseña"><br>
+  <button id="btn-register">Registrar</button>
+
+  <script>
+    document.getElementById("btn-register").addEventListener("click", async () => {
+      const name = document.getElementById("name").value;
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+
+      const response = await fetch("http://127.0.0.1:5000/users/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password })
+      });
+      const data = await response.json();
+      alert(data.msg);
+      if (response.ok) window.location.href = "login.html";
+    });
+  </script>
+</body>
+</html>
