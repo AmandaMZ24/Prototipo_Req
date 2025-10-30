@@ -1,215 +1,221 @@
-# PetLink — Setup & Testing Guide
+# 🐾 PetLink — Guía de instalación y pruebas
 
-This repository contains a small pet adoption prototype with a Flask backend and static frontend pages.
+Este repositorio contiene un prototipo funcional de adopción de mascotas con un **backend en Flask** y un **frontend estático**.
 
-This README explains, step-by-step, how to set up the environment, create the database, run the backend, and test the application (frontend + API). It assumes you're on Windows (PowerShell) but the steps are similar on macOS/Linux.
+Este documento explica paso a paso cómo configurar el entorno, crear la base de datos, ejecutar el backend y probar la aplicación (frontend + API).  
+Las instrucciones están pensadas para **Windows (PowerShell)**, pero los pasos son similares en macOS o Linux.
 
-## Repository layout (important files)
+---
 
-- `backend/` — Flask API server
-  - `app.py` — application entrypoint
-  - `config.py` — configuration helpers
-  - `db.py` — database connection helper
-  - `requirements.txt` — Python dependencies for the backend
-- `models/` — Python model helpers used by routes
-- `routes/` — Flask route blueprints for users, pets, adoptions/requests
-- `database/petlink.sql` — SQL schema & seed statements (creates the `petlink` database and tables)
-- `frontend/` — static HTML pages and JS used for manual testing
+## 📁 Estructura del repositorio
 
-## Quick contract (what this README provides)
+- **backend/** — Servidor API con Flask  
+  - `app.py` — Punto de entrada principal de la aplicación  
+  - `config.py` — Configuración general  
+  - `db.py` — Conexión con la base de datos  
+  - `requirements.txt` — Dependencias de Python para el backend  
+- **models/** — Modelos de Python utilizados por las rutas  
+- **routes/** — Blueprints de Flask para usuarios, mascotas y adopciones  
+- **database/petlink.sql** — Script SQL que crea la base de datos y las tablas  
+- **frontend/** — Páginas HTML y JS estáticos para pruebas manuales  
 
-- Inputs: a running MySQL / MariaDB server, Python 3.8+, access to a web browser
-- Outputs: a running backend at `http://127.0.0.1:5000` and frontend pages you can open in your browser
-- Success criteria: able to register/login users, list and add pets (admin), send adoption requests
+---
 
-## Prerequisites
+## 🎯 Qué ofrece este README
 
-1. Python 3.8+ installed and on PATH.
-2. MySQL or MariaDB server installed and running locally. You need a MySQL client (e.g., `mysql` command) to run the supplied SQL script.
-3. Optional but recommended: create and use a Python virtual environment.
+**Entradas necesarias:**  
+- Servidor MySQL o MariaDB en ejecución  
+- Python 3.8 o superior  
+- Acceso a un navegador web  
 
-## 1) Prepare Python environment
+**Resultados esperados:**  
+- Backend funcionando en `http://127.0.0.1:5000`  
+- Frontend visible en el navegador  
 
-Open PowerShell in the project root (`E:\IC-TEC\II SEMESTRE 2025\REQUERIMIENTOS DE SOFTWARE\Proyecto\Prototipo`).
+**Objetivo:**  
+- Registrar o iniciar sesión de usuarios  
+- Listar y agregar mascotas (admin)  
+- Enviar solicitudes de adopción  
 
-Create and activate a virtual environment (recommended):
+---
+
+## ⚙️ Prerrequisitos
+
+1. Tener **Python 3.8 o superior** instalado y agregado al PATH.  
+2. Tener **MySQL o MariaDB** instalados y en ejecución.  
+3. *(Opcional pero recomendado)* Crear y usar un entorno virtual de Python.  
+
+---
+
+## 🐍 1) Preparar el entorno de Python
+
+Abre PowerShell en el directorio raíz del proyecto.  
+Ejemplo:  
+```
+E:\IC-TEC\II SEMESTRE 2025\REQUERIMIENTOS DE SOFTWARE\Proyecto\Prototipo
+```
+
+Crea y activa un entorno virtual:
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
-Install backend dependencies:
+Instala las dependencias del backend:
 
 ```powershell
 pip install -r backend/requirements.txt
 ```
 
-The `backend/requirements.txt` includes:
+El archivo `requirements.txt` incluye:  
+- Flask (>=2.2)  
+- flask-cors  
+- flask-jwt-extended  
+- flask-bcrypt  
+- mysql-connector-python o PyMySQL  
 
-- Flask (>=2.2)
-- flask-cors
-- flask-jwt-extended
-- flask-bcrypt
-- mysql-connector-python or PyMySQL (both may be present; the code uses the configured connector)
+Si aparecen errores de permisos, ejecuta PowerShell como administrador o usa el parámetro `--user` (no recomendado dentro del entorno virtual).
 
-If you hit permission problems, run PowerShell as Administrator, or use `--user` for pip install (not recommended in virtualenv).
+---
 
-## 2) Create the MySQL database
+## 🐬 2) Crear la base de datos MySQL
 
-The `database/petlink.sql` file contains SQL to create the `petlink` database, tables and seed data. There are two common ways to apply it.
+El archivo `database/petlink.sql` contiene las sentencias SQL para crear la base de datos **petlink**, las tablas y los datos de ejemplo.
 
-Option A — use the mysql client (recommended):
+### Opción A — Usando el cliente `mysql` (recomendada):
 
 ```powershell
-# Run this in the project root
 mysql -u root -p < database\petlink.sql
 ```
 
-You'll be prompted for the MySQL `root` password. If the file executes successfully, the `petlink` database and tables will exist.
+Se solicitará la contraseña del usuario **root**.  
+Si el script se ejecuta correctamente, la base `petlink` quedará creada.
 
-Option B — from within the MySQL interactive console:
+### Opción B — Desde la consola interactiva de MySQL:
 
 ```sql
-# open mysql client first
 mysql -u root -p
-# then in the mysql prompt
 SOURCE E:/IC-TEC/II SEMESTRE 2025/REQUERIMIENTOS DE SOFTWARE/Proyecto/Prototipo/database/petlink.sql;
 ```
 
-Notes:
-- If you prefer to create a dedicated DB user for the app, run this in the MySQL prompt (adjust the password):
+Si deseas crear un usuario dedicado para la aplicación, ejecuta:
 
 ```sql
-CREATE USER 'petuser'@'localhost' IDENTIFIED BY 'strong_password';
+CREATE USER 'petuser'@'localhost' IDENTIFIED BY 'contraseña_segura';
 GRANT ALL PRIVILEGES ON petlink.* TO 'petuser'@'localhost';
 FLUSH PRIVILEGES;
 ```
 
-- If you change the DB user/password/database, update the configuration in `backend/db.py` or use environment variables if you change the code to read them.
+> 💡 Si cambias el usuario, la contraseña o el nombre de la base, actualiza los valores en `backend/db.py`.
 
-## 3) Configure the backend
+---
 
-By default the repository contains `backend/db.py` and `backend/config.py`. The simplest approach is to open `backend/db.py` and set the connection parameters (host, user, password, database) to match your MySQL setup.
+## 🧩 3) Configurar el backend
 
-Preferred production approach (optional):
+Abre `backend/db.py` y edita los datos de conexión:
 
-- Store secrets in environment variables and update `backend/config.py` / `backend/app.py` to read them. There is already a `config.py` that may help. Search for `JWT_SECRET_KEY` and database configuration in the backend files.
+```python
+config = {
+    'host': 'localhost',
+    'user': 'root',
+    'password': 'tu_contraseña',
+    'database': 'petlink'
+}
+```
 
-## 4) Start the backend
+También puedes usar variables de entorno y modificarlas en `config.py` o `app.py` si deseas una configuración más segura.
 
-From the project root (or `backend/`) run:
+---
+
+## 🚀 4) Iniciar el backend
+
+Desde la raíz del proyecto (o dentro de `backend/`):
 
 ```powershell
 python backend/app.py
 ```
 
-By default Flask should start on `http://127.0.0.1:5000`. If you changed the host/port, follow the printed startup messages.
+Flask debería iniciar en `http://127.0.0.1:5000`.  
+Si aparecen errores de módulos faltantes, asegúrate de haber activado el entorno virtual y de haber instalado las dependencias correctamente.
 
-If you get errors about missing modules, ensure you installed dependencies in the correct Python environment.
+---
 
-## 5) Run or open the frontend
+## 🌐 5) Ejecutar o abrir el frontend
 
-The `frontend/` folder contains static HTML pages. You can open them directly in the browser (double-click the `.html`) or serve them with a simple HTTP server so fetches use `http://` (recommended for some browsers' CORS behavior):
-
-From the `frontend` folder:
+Dentro de la carpeta `frontend/` se encuentran las páginas HTML.  
+Puedes abrirlas directamente con doble clic o servirlas mediante un servidor HTTP simple:
 
 ```powershell
 python -m http.server 8000
 ```
 
-Then open `http://127.0.0.1:8000/index.html` in your browser.
+Luego entra a tu navegador y abre:  
+👉 [http://127.0.0.1:8000/index.html](http://127.0.0.1:8000/index.html)
 
-Note: If the frontend calls the API at `http://127.0.0.1:5000`, make sure the backend is running on that address and port.
+Asegúrate de que el backend esté corriendo en `http://127.0.0.1:5000`, ya que esa es la dirección a la que apunta el frontend.
 
-## 6) Test flows (manual via frontend)
+---
 
-1. Open the frontend pages in the browser (index, register, login, pets, add_pet, edit_pet).
-2. Register a new user from the register page. The register form should call the backend register endpoint.
-3. Login via `frontend/login.html`. The login flow stores a JWT token in `localStorage` which the front-end uses for protected routes.
-4. Visit `pets.html` to list pets. If you registered as an admin, you will be able to add or edit pets using the admin pages.
+## 🧪 6) Pruebas manuales (frontend)
 
-If registration pages don't expose a `role` field, use the API directly to create an admin (see curl examples below) or change the database manually.
+1. Abre las páginas del frontend (`index.html`, `register.html`, `login.html`, `pets.html`, `add_pet.html`, `edit_pet.html`).  
+2. Registra un nuevo usuario desde la página de registro.  
+3. Inicia sesión con el usuario creado; el frontend guardará el **token JWT** en `localStorage`.  
+4. Ingresa a `pets.html` para ver las mascotas disponibles.  
+   - Si iniciaste como **administrador**, podrás agregar o editar mascotas.  
 
-## 7) Test flows (API-level, curl examples)
+> 🔸 Si la página de registro no tiene opción para crear administradores, puedes hacerlo desde la API o directamente en la base de datos.
 
-Below are cURL examples to exercise the API. Replace `127.0.0.1:5000` if your backend uses a different host/port.
+---
 
-- Register a normal user:
+## 🧰 7) Pruebas por API (cURL)
 
-```powershell
-curl -X POST http://127.0.0.1:5000/users/register `
-  -H "Content-Type: application/json" `
-  -d '{"name":"Alice","email":"alice@example.com","password":"pass123"}'
-```
-
-- Register an admin (if the backend supports role in the register payload):
+**Registrar usuario:**
 
 ```powershell
 curl -X POST http://127.0.0.1:5000/users/register `
   -H "Content-Type: application/json" `
-  -d '{"name":"Admin","email":"admin@example.com","password":"adminpass","role":"admin"}'
+  -d "{\"name\":\"Alice\",\"email\":\"alice@example.com\",\"password\":\"pass123\"}"
 ```
 
-- Login to receive JWT token:
+**Registrar administrador (si el backend lo permite):**
+
+```powershell
+curl -X POST http://127.0.0.1:5000/users/register `
+  -H "Content-Type: application/json" `
+  -d "{\"name\":\"Admin\",\"email\":\"admin@example.com\",\"password\":\"adminpass\",\"role\":\"admin\"}"
+```
+
+**Iniciar sesión:**
 
 ```powershell
 curl -X POST http://127.0.0.1:5000/users/login `
   -H "Content-Type: application/json" `
-  -d '{"email":"admin@example.com","password":"adminpass"}'
+  -d "{\"email\":\"admin@example.com\",\"password\":\"adminpass\"}"
 ```
 
-The response typically contains a token (look for a `token` or similar field). Use that token for protected endpoints.
-
-- List pets (public):
+**Listar mascotas:**
 
 ```powershell
 curl http://127.0.0.1:5000/pets/
 ```
 
-- Add a pet (admin only):
+**Agregar una mascota (requiere token):**
 
 ```powershell
 curl -X POST http://127.0.0.1:5000/pets/ `
   -H "Content-Type: application/json" `
   -H "Authorization: Bearer <TOKEN>" `
-  -d '{"name":"Firulais","species":"Perro","breed":"Mixta","age":3,"availability":"disponible"}'
+  -d "{\"name\":\"Firulais\",\"species\":\"Perro\",\"breed\":\"Mixta\",\"age\":3,\"availability\":\"disponible\"}"
 ```
 
-- Create an adoption request (authenticated user):
+**Crear una solicitud de adopción:**
 
 ```powershell
 curl -X POST http://127.0.0.1:5000/adoptions/ `
   -H "Content-Type: application/json" `
   -H "Authorization: Bearer <TOKEN>" `
-  -d '{"pet_id":1,"reason":"I love pets"}'
+  -d "{\"pet_id\":1,\"reason\":\"Amo a los animales\"}"
 ```
 
-## 8) Troubleshooting
-
-- Database connection errors: verify `backend/db.py` credentials, ensure MySQL service is running, ensure the `petlink` database exists.
-- Module import errors: ensure you installed the requirements into the Python interpreter you use to run `app.py` (activate your venv first).
-- CORS issues: the backend enables CORS in `app.py` (look for `flask_cors.CORS`). If you still see blocked requests, check browser console and verify the backend is reachable from the frontend origin.
-- JWT / authentication errors: check `app.py` for `JWT_SECRET_KEY` and ensure the token in requests is the token returned by the login endpoint. For production keep the secret outside source control.
-- If the frontend cannot fetch the API and you served the frontend using `file://` (opened directly in browser), try serving it with `python -m http.server 8000` so HTTP origins match and CORS applies correctly.
-
-## 9) Helpful tips and notes
-
-- There are two request/adoption route modules in the repo: `routes/requests.py` and `routes/adoption.py`. The frontend appears to use the `/adoptions` routes; check both files if behavior seems duplicated.
-- For development, use a local MySQL user with limited privileges rather than `root`.
-- For persistent debugging, add logging to `app.py` or run Flask in debug mode (only for development).
-
-## 10) Next steps / potential improvements (optional)
-
-- Move DB credentials and JWT secret to environment variables and read them in `config.py`.
-- Add a small script `scripts/init_db.py` to run `database/petlink.sql` programmatically and optionally create an admin account.
-- Add unit tests for API endpoints using `pytest` and a test database.
-
----
-
-If you want, I can also:
-
-- Add a small `scripts/init_db.ps1` that runs the SQL file and optionally creates a test admin user.
-- Add a `README` at `backend/README.md` explaining backend-specific environment variables.
-
-Tell me which of the optional extras you'd like and I'll add them.
