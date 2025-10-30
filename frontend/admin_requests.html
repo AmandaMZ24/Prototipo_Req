@@ -1,54 +1,117 @@
 <!doctype html>
 <html lang="es">
-<head><meta charset="utf-8"><title>Solicitudes de Adopción - Admin</title><style>
-    body {background-color: #f1ca49;}
-  </style></head>
+<head>
+  <meta charset="utf-8">
+  <title>Solicitudes de Adopción - Admin</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-image: url('background.png');
+      margin: 20px;
+    }
+    select, button {
+      margin: 10px;
+      padding: 5px;
+    }
+    .request-card {
+      background: #fff;
+      border-radius: 10px;
+      padding: 10px;
+      margin-bottom: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+    .request-card h3 {
+      margin: 0 0 5px;
+    }
+  </style>
+</head>
 <body>
+
+<h1>Solicitudes de Adopción</h1>
+
+<div>
+  <label>Filtrar por estado:</label>
+  <select id="statusFilter">
+    <option value="">Todos</option>
+    <option value="En revisión">En revisión</option>
+    <option value="Aprobada">Aprobadas</option>
+    <option value="Rechazada">Rechazadas</option>
+  </select>
+  <button onclick="loadRequests()">Filtrar</button>
+</div>
+
+<div id="list">Cargando...</div>
+
+<p><a href="pets.html">← Volver</a></p>
+
 <script>
 const API = "http://127.0.0.1:5000/requests/admin";
 const token = localStorage.getItem("token");
-(function checkAdmin() {
-  const t = token; // usar directamente el token almacenado
-  if (!t) { alert("Debes iniciar sesión como administrador"); location.href="login.html"; return; }
-  try {
-    const payload = JSON.parse(atob(t.split('.')[1]));
-    // payload.role existe si backend lanzó additional_claims; si no, revisar payload.sub.role
-    const role = payload.role || (payload.sub && payload.sub.role);
-    if (role !== "admin") { alert("Acceso denegado"); location.href="pets.html"; }
-  }
-  catch(e){ alert("Token inválido"); location.href="login.html"; }
-})();
 
-async function loadRequests(){
+// 🧩 Cargar solicitudes
+async function loadRequests() {
+  const status = document.getElementById("statusFilter").value;
+  const url = status ? `${API}?status=${encodeURIComponent(status)}` : API;
+
   try {
-    const res = await fetch(API, {
+    const res = await fetch(url, {
       headers: { "Authorization": `Bearer ${token}` }
     });
     if (!res.ok) throw new Error("No se pudieron obtener las solicitudes");
     const requests = await res.json();
+
     const listDiv = document.getElementById("list");
     if (requests.length === 0) {
-      listDiv.innerHTML = "<p>No hay solicitudes de adopción.</p>";
+      listDiv.innerHTML = "<p>No hay solicitudes.</p>";
       return;
     }
-    const ul = document.createElement("ul");
-    requests.forEach(r => {
-      const li = document.createElement("li");
-      li.innerHTML = `<strong>Solicitud ID:</strong> ${r.id} | <strong>Mascota ID:</strong> ${r.pet_id} | <strong>Usuario ID:</strong> ${r.user_id} | <strong>Fecha:</strong> ${new Date(r.request_date).toLocaleDateString()} | <strong>Estado:</strong> ${r.status}`;
-      ul.appendChild(li);
-    });
+
     listDiv.innerHTML = "";
-    listDiv.appendChild(ul);
-  } catch(e) {
+    requests.forEach(r => {
+      const div = document.createElement("div");
+      div.className = "request-card";
+      div.innerHTML = `
+        <h3>${r.user_name} solicita a ${r.pet_name}</h3>
+        <p><b>Estado:</b> ${r.status}</p>
+        <p><b>Motivo:</b> ${r.reason || "(sin motivo)"}</p>
+        <p><b>Fecha:</b> ${new Date(r.request_date).toLocaleDateString()}</p>
+        <label>Cambiar estado:</label>
+        <select id="status-${r.id}">
+          <option value="En revisión" ${r.status==="En revisión"?"selected":""}>En revisión</option>
+          <option value="Aprobada" ${r.status==="Aprobada"?"selected":""}>Aprobada</option>
+          <option value="Rechazada" ${r.status==="Rechazada"?"selected":""}>Rechazada</option>
+        </select>
+        <button onclick="updateStatus(${r.id})">Guardar</button>
+      `;
+      listDiv.appendChild(div);
+    });
+  } catch (e) {
     alert(e.message);
+  }
+}
+
+// 🧩 Actualizar estado
+async function updateStatus(id) {
+  const newStatus = document.getElementById(`status-${id}`).value;
+  try {
+    const res = await fetch(`http://127.0.0.1:5000/requests/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({ status: newStatus })
+    });
+    const data = await res.json();
+    alert(data.msg || "Estado actualizado");
+    loadRequests(); // recargar
+  } catch (e) {
+    alert("Error al actualizar estado");
   }
 }
 
 document.addEventListener("DOMContentLoaded", loadRequests);
 </script>
 
-<h1>Solicitudes de Adopción</h1>
-<div id="list">Cargando...</div>
-<p><a href="pets.html">Volver</a></p>
 </body>
 </html>

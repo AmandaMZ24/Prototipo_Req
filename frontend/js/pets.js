@@ -115,17 +115,35 @@ function expandCard(div, pet) {
 }
 
 async function sendAdoption(petId) {
-  const reason = document.getElementById(`reason-${petId}`).value;
-  const res = await fetch("http://127.0.0.1:5000/adoptions/", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`
-    },
-    body: JSON.stringify({ pet_id: petId, reason })
-  });
-  const data = await res.json();
-  alert(data.msg || "Solicitud enviada.");
+  const reason = document.getElementById(`reason-${petId}`).value.trim();
+
+  if (!reason) {
+    alert("Por favor escribe un motivo para tu solicitud.");
+    return;
+  }
+
+  try {
+    const res = await fetch("http://127.0.0.1:5000/requests", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({ pet_id: petId, reason })
+    });
+
+    // Si la respuesta no es correcta, mostrar error con detalles
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.msg || `Error ${res.status}: No se pudo enviar la solicitud`);
+    }
+
+    const data = await res.json();
+    alert(data.msg || "Solicitud enviada con éxito 🐾");
+  } catch (err) {
+    console.error("Error al enviar la solicitud:", err);
+    alert(err.message);
+  }
 }
 
 function editPet(id) {
