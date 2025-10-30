@@ -29,20 +29,27 @@ def create_request():
 
     return jsonify({"msg": "Solicitud enviada con éxito ✅"}), 201
 
-# Listar solicitudes de un usuario (por si luego querés mostrarle su historial)
-@bp.route("/", methods=["GET"])
+# 🔹 Ruta solo para ADMIN: ver todas las solicitudes
+@bp.route("/admin", methods=["GET"])
 @jwt_required()
-def list_requests():
+def get_all_requests():
     db = get_db()
-    email = get_jwt_identity()
     cursor = db.cursor(dictionary=True)
+
+    identity = get_jwt_identity()
+    # identity debe contener el rol (viene del token)
+    role = identity.get("role") if isinstance(identity, dict) else None
+    if role != "admin":
+        return jsonify({"msg": "Acceso denegado"}), 403
+
     cursor.execute("""
-        SELECT a.id, p.name AS pet_name, a.reason, a.status, a.created_at
-        FROM adoption_requests a
-        JOIN users u ON u.id = a.user_id
-        JOIN pets p ON p.id = a.pet_id
-        WHERE u.email = %s
-        ORDER BY a.created_at DESC
-    """, (email,))
-    requests = cursor.fetchall()
-    return jsonify(requests), 200
+        SELECT ar.id, ar.user_id, ar.pet_id, ar.status, ar.created_at AS request_date,
+               u.name AS user_name, p.name AS pet_name
+        FROM adoption_requests ar
+        JOIN users u ON ar.user_id = u.id
+        JOIN pets p ON ar.pet_id = p.id
+        ORDER BY ar.created_at DESC
+    """)
+    data = cursor.fetchall()
+    cursor.close()
+    return jsonify(data), 200

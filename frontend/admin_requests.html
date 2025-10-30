@@ -1,6 +1,8 @@
 <!doctype html>
 <html lang="es">
-<head><meta charset="utf-8"><title>Solicitudes de Adopción - Admin</title></head>
+<head><meta charset="utf-8"><title>Solicitudes de Adopción - Admin</title><style>
+    body {background-color: #f1ca49;}
+  </style></head>
 <body>
 <script>
 const API = "http://127.0.0.1:5000/requests/admin";
@@ -18,24 +20,28 @@ const token = localStorage.getItem("token");
 })();
 
 async function loadRequests(){
-  const token = localStorage.getItem("token");
   try {
-    console.log("Token desde localStorage:", token);
-    const authHeader = "Bearer " + token;
-    console.log("Authorization header:", authHeader);
-    const res = await fetch(API, { headers: { Authorization: "Bearer " + token } });
-    if (!res.ok) {
-      // intentar mostrar el mensaje que devuelve el backend para depuración
-      let body = null;
-      try { body = await res.json(); } catch(e){ body = await res.text(); }
-      console.error("Error cargando solicitudes:", res.status, body);
-      const msg = (body && body.msg) ? body.msg : (typeof body === 'string' ? body : 'Error cargando solicitudes');
-      throw new Error(msg + " (status: " + res.status + ")");
+    const res = await fetch(API, {
+      headers: { "Authorization": `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error("No se pudieron obtener las solicitudes");
+    const requests = await res.json();
+    const listDiv = document.getElementById("list");
+    if (requests.length === 0) {
+      listDiv.innerHTML = "<p>No hay solicitudes de adopción.</p>";
+      return;
     }
-    const data = await res.json();
-    const el = document.getElementById("list");
-    el.innerHTML = data.map(r => `<div><strong>${r.mascota}</strong> por ${r.usuario} — ${r.status}<br>Motivo: ${r.reason || ""}</div><hr>`).join("");
-  } catch(e){ alert(e.message); }
+    const ul = document.createElement("ul");
+    requests.forEach(r => {
+      const li = document.createElement("li");
+      li.innerHTML = `<strong>Solicitud ID:</strong> ${r.id} | <strong>Mascota ID:</strong> ${r.pet_id} | <strong>Usuario ID:</strong> ${r.user_id} | <strong>Fecha:</strong> ${new Date(r.request_date).toLocaleDateString()} | <strong>Estado:</strong> ${r.status}`;
+      ul.appendChild(li);
+    });
+    listDiv.innerHTML = "";
+    listDiv.appendChild(ul);
+  } catch(e) {
+    alert(e.message);
+  }
 }
 
 document.addEventListener("DOMContentLoaded", loadRequests);
