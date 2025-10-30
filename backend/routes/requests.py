@@ -1,7 +1,7 @@
 # backend/routes/requests.py
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from db import get_connection
+from db import get_db as get_connection
 from mysql.connector import Error
 
 bp = Blueprint("requests", __name__, url_prefix="/requests")

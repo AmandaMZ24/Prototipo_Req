@@ -24,13 +24,19 @@ function renderNavbar() {
     links = `
       <a href="index.html">Inicio</a> |
       <a href="add_pet.html">Agregar mascota</a> |
-      <a href="#" id="btn-logout">Cerrar sesión</a>`;
+      <a href="admin_stats.html">Ver estadísticas</a> |
+      <a href="admin_requests.html">Ver solicitudes de adopción</a> |
+      <a href="#" id="btn-logout">Cerrar sesión</a>
+    `;
   }
   navbar.innerHTML = links;
-  document.getElementById("btn-logout").addEventListener("click", () => {
-    localStorage.removeItem("token");
-    window.location.href = "index.html";
-  });
+  const btn = document.getElementById("btn-logout");
+  if (btn) {
+    btn.addEventListener("click", () => {
+      localStorage.removeItem("token");
+      window.location.href = "index.html";
+    });
+  }
 }
 
 async function loadPets(filters = {}) {
@@ -59,10 +65,17 @@ async function loadPets(filters = {}) {
       ${role === "admin" ? `
         <button onclick="editPet(${p.id})">✏️ Editar</button>
         <button onclick="deletePet(${p.id})">🗑️ Eliminar</button>
-      ` : ""}
+      ` : ""}    
     `;
+
     if (role === "adoptante") {
-      div.addEventListener("click", () => expandCard(div, p));
+      // Evitar colapsar/expandir cuando el click viene de un control interactivo (textarea/button/input...)
+      div.addEventListener("click", (ev) => {
+        const tag = ev.target.tagName;
+        const interactive = ["TEXTAREA", "BUTTON", "INPUT", "SELECT", "A", "LABEL"];
+        if (interactive.includes(tag)) return;
+        expandCard(div, p);
+      });
     }
     list.appendChild(div);
   });
@@ -92,8 +105,13 @@ function expandCard(div, pet) {
     <p><strong>Estado de salud:</strong> ${pet.health_status}</p>
     <p><strong>Disponibilidad:</strong> ${pet.availability}</p>
     <textarea id="reason-${pet.id}" placeholder="¿Por qué quieres adoptar a ${pet.name}?"></textarea><br>
-    <button onclick="sendAdoption(${pet.id})">💌 Enviar solicitud</button>
+    <button id="send-${pet.id}">💌 Enviar solicitud</button>
   `;
+
+  // Evitar que clics en elementos internos cierren la tarjeta
+  div.querySelector("textarea").addEventListener("click", e => e.stopPropagation());
+  div.querySelector("button").addEventListener("click", e => e.stopPropagation());
+  div.querySelector("button").addEventListener("click", () => sendAdoption(pet.id));
 }
 
 async function sendAdoption(petId) {

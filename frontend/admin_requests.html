@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><title>Solicitudes de Adopción - Admin</title></head>
+<body>
+<script>
+const API = "http://127.0.0.1:5000/requests/admin";
+const token = localStorage.getItem("token");
+(function checkAdmin() {
+  const t = token; // usar directamente el token almacenado
+  if (!t) { alert("Debes iniciar sesión como administrador"); location.href="login.html"; return; }
+  try {
+    const payload = JSON.parse(atob(t.split('.')[1]));
+    // payload.role existe si backend lanzó additional_claims; si no, revisar payload.sub.role
+    const role = payload.role || (payload.sub && payload.sub.role);
+    if (role !== "admin") { alert("Acceso denegado"); location.href="pets.html"; }
+  }
+  catch(e){ alert("Token inválido"); location.href="login.html"; }
+})();
+
+async function loadRequests(){
+  const token = localStorage.getItem("token");
+  try {
+    console.log("Token desde localStorage:", token);
+    const authHeader = "Bearer " + token;
+    console.log("Authorization header:", authHeader);
+    const res = await fetch(API, { headers: { Authorization: "Bearer " + token } });
+    if (!res.ok) {
+      // intentar mostrar el mensaje que devuelve el backend para depuración
+      let body = null;
+      try { body = await res.json(); } catch(e){ body = await res.text(); }
+      console.error("Error cargando solicitudes:", res.status, body);
+      const msg = (body && body.msg) ? body.msg : (typeof body === 'string' ? body : 'Error cargando solicitudes');
+      throw new Error(msg + " (status: " + res.status + ")");
+    }
+    const data = await res.json();
+    const el = document.getElementById("list");
+    el.innerHTML = data.map(r => `<div><strong>${r.mascota}</strong> por ${r.usuario} — ${r.status}<br>Motivo: ${r.reason || ""}</div><hr>`).join("");
+  } catch(e){ alert(e.message); }
+}
+
+document.addEventListener("DOMContentLoaded", loadRequests);
+</script>
+
+<h1>Solicitudes de Adopción</h1>
+<div id="list">Cargando...</div>
+<p><a href="pets.html">Volver</a></p>
+</body>
+</html>
