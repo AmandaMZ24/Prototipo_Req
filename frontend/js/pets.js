@@ -104,14 +104,20 @@ function expandCard(div, pet) {
     <p><strong>Sexo:</strong> ${pet.sex || "No especificado"}</p>
     <p><strong>Estado de salud:</strong> ${pet.health_status}</p>
     <p><strong>Disponibilidad:</strong> ${pet.availability}</p>
-    <textarea id="reason-${pet.id}" placeholder="¿Por qué quieres adoptar a ${pet.name}?"></textarea><br>
-    <button id="send-${pet.id}">💌 Enviar solicitud</button>
+    ${pet.availability === "disponible" ? `
+      <textarea id="reason-${pet.id}" placeholder="¿Por qué quieres adoptar a ${pet.name}?"></textarea><br>
+      <button id="send-${pet.id}">💌 Enviar solicitud</button>
+    ` : `<p style="font-weight:bold;color:#b00;">No disponible para adopción</p>`}
   `;
 
   // Evitar que clics en elementos internos cierren la tarjeta
-  div.querySelector("textarea").addEventListener("click", e => e.stopPropagation());
-  div.querySelector("button").addEventListener("click", e => e.stopPropagation());
-  div.querySelector("button").addEventListener("click", () => sendAdoption(pet.id));
+  const textareaEl = div.querySelector(`#reason-${pet.id}`);
+  const buttonEl = div.querySelector(`#send-${pet.id}`);
+  if (textareaEl) textareaEl.addEventListener("click", e => e.stopPropagation());
+  if (buttonEl) {
+    buttonEl.addEventListener("click", e => e.stopPropagation());
+    buttonEl.addEventListener("click", () => sendAdoption(pet.id));
+  }
 }
 
 async function sendAdoption(petId) {

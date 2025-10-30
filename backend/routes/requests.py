@@ -28,10 +28,14 @@ def create_request():
         # si está reservada/adoptada, se rechaza
         if pet[0] != "disponible":
             return jsonify({"msg":"Mascota no disponible"}), 400
+        # Insertar la solicitud y marcar la mascota como 'reservado'
         cur.execute("INSERT INTO adoption_requests (user_id, pet_id, reason) VALUES (%s,%s,%s)",
                     (user_id, pet_id, reason))
+        request_id = cur.lastrowid
+        # Marcar mascota como 'reservado' hasta que un admin revise
+        cur.execute("UPDATE pets SET availability=%s WHERE id=%s", ("reservado", pet_id))
         conn.commit()
-        return jsonify({"msg":"Solicitud registrada","id": cur.lastrowid}), 201
+        return jsonify({"msg":"Solicitud registrada","id": request_id}), 201
     except Error as e:
         return jsonify({"msg":"Error en DB","error": str(e)}), 500
     finally:
@@ -99,7 +103,8 @@ def update_request_status(request_id):
         cur2 = conn.cursor()
         cur2.execute("UPDATE adoption_requests SET status=%s WHERE id=%s", (new_status, request_id))
         if new_status == "Aprobada":
-            cur2.execute("UPDATE pets SET availability=%s WHERE id=%s", ("reservado", r["pet_id"]))
+            # Pet is adopted when a request is approved
+            cur2.execute("UPDATE pets SET availability=%s WHERE id=%s", ("adoptado", r["pet_id"]))
         conn.commit()
         return jsonify({"msg":"Estado actualizado correctamente"}), 200
     except Error as e:
@@ -134,9 +139,12 @@ def decide_request(request_id):
         # actualizar solicitud
         cur2 = conn.cursor()
         cur2.execute("UPDATE adoption_requests SET status=%s WHERE id=%s", (decision, request_id))
-        # si aprobada, actualizar mascota a 'reservado' o 'adoptado' segun flujo (aquí usamos 'reservado')
+        # si aprobada, actualizar mascota a 'adoptado'
         if decision == "Aprobada":
-            cur2.execute("UPDATE pets SET availability=%s WHERE id=%s", ("reservado", r["pet_id"]))
+            cur2.execute("UPDATE pets SET availability=%s WHERE id=%s", ("adoptado", r["pet_id"]))
+        elif decision == "Rechazada":
+            # Si la solicitud fue rechazada, volver a poner la mascota disponible
+            cur2.execute("UPDATE pets SET availability=%s WHERE id=%s", ("disponible", r["pet_id"]))
         conn.commit()
         return jsonify({"msg":"Decision guardada"}), 200
     except Error as e:
