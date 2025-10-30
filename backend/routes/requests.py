@@ -10,8 +10,8 @@ bp = Blueprint("requests", __name__, url_prefix="/requests")
 @jwt_required()
 def create_request():
     # cualquier usuario autenticado puede solicitar
-    identity = get_jwt_identity()
-    user_id = identity.get("id")
+    claims = get_jwt()
+    user_id = claims.get("id")
     data = request.get_json()
     pet_id = data.get("pet_id")
     reason = data.get("reason", "")
@@ -42,8 +42,8 @@ def create_request():
 @jwt_required()
 def list_requests_admin():
     # solo admin
-    identity = get_jwt_identity()
-    if identity.get("role") != "admin":
+    claims = get_jwt()
+    if claims.get("role") != "admin":
         return jsonify({"msg":"Acceso no autorizado"}), 403
     try:
         conn = get_connection()
@@ -67,8 +67,8 @@ def list_requests_admin():
 @jwt_required()
 def decide_request(request_id):
     # admin aprueba/rechaza
-    identity = get_jwt_identity()
-    if identity.get("role") != "admin":
+    claims = get_jwt()
+    if claims.get("role") != "admin":
         return jsonify({"msg":"Acceso no autorizado"}), 403
     data = request.get_json()
     decision = data.get("decision")  # "Aprobada" o "Rechazada"

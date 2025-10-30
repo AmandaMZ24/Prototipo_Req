@@ -37,10 +37,11 @@ def login():
     user = cursor.fetchone()
 
     if user and bcrypt.check_password_hash(user["password_hash"], password):
-        # Crear token JWT: incluir id, email y role en la identidad
-        # y también emitir role como claim adicional para comodidad del frontend.
-        identity = {"id": user["id"], "email": user["email"], "role": user["role"]}
-        access_token = create_access_token(identity=identity, additional_claims={"role": user["role"]})
+        # Crear token JWT: usar email (string) como identity para evitar error "Subject must be a string"
+        # y poner id/role en additional_claims para que estén disponibles en las rutas.
+        identity = user["email"]
+        access_token = create_access_token(identity=identity,
+                                           additional_claims={"id": user["id"], "role": user["role"]})
         return jsonify({
             "msg": "Inicio de sesión exitoso ✅",
             "token": access_token,
